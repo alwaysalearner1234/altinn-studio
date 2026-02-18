@@ -13,7 +13,7 @@ describe('Instantiation', () => {
   // See ttd/frontend-test/App/logic/Instantiation/InstantiationValidator.cs
   const invalidParty =
     Cypress.env('type') === 'localtest'
-      ? /950474084/ // Localtest: Oslos Vakreste borettslag
+      ? /01899699001/ // Localtest: Oslos Vakreste borettslag
       : /310732001/; // TT02: Søvnig Impulsiv Tiger AS
 
   it('should show an error message when going directly to instantiation', () => {
@@ -45,7 +45,7 @@ describe('Instantiation', () => {
         { id: 'def456', lastChanged: '2023-01-02T00:00:00.000Z', lastChangedBy: 'user' },
       ],
     });
-    cy.startAppInstance(appFrontend.apps.frontendTest, { cyUser: 'manager' });
+    cy.startAppInstance(appFrontend.apps.frontendTest, { cyUser: 'multiPartyPrompt' });
     cy.findByRole('button', { name: invalidParty }).click();
 
     cy.findByText('Du har allerede startet å fylle ut dette skjemaet.').should('be.visible');
@@ -79,6 +79,7 @@ describe('Instantiation', () => {
     });
 
     interceptAltinnAppGlobalData((globalData) => {
+      globalData.applicationMetadata.onEntry = { show: 'new-instance' };
       globalData.textResources?.resources.push({
         id: 'custom_error_too_long',
         value: 'Verdien kan ikke være lengre enn {0}, den er nå {1}',
