@@ -32,7 +32,6 @@ public class HomeController : Controller
     private readonly AppSettings _appSettings;
     private readonly IAppResources _appResources;
     private readonly IAppMetadata _appMetadata;
-    private readonly AppIdentifier _appId;
     private readonly ILogger<HomeController> _logger;
     private readonly List<string> _onEntryWithInstance = new List<string> { "new-instance", "select-instance" };
     private readonly IBootstrapGlobalService _bootstrapGlobalService;
@@ -49,7 +48,6 @@ public class HomeController : Controller
     /// <param name="appSettings">The application settings.</param>
     /// <param name="appResources">The application resources service.</param>
     /// <param name="appMetadata">The application metadata service.</param>
-    /// <param name="appId">App identifier from config</param>
     /// <param name="logger">The logger for the controller.</param>
     public HomeController(
         IServiceProvider serviceProvider,
@@ -59,7 +57,6 @@ public class HomeController : Controller
         IOptions<AppSettings> appSettings,
         IAppResources appResources,
         IAppMetadata appMetadata,
-        AppIdentifier appId,
         ILogger<HomeController> logger
     )
     {
@@ -69,7 +66,6 @@ public class HomeController : Controller
         _appSettings = appSettings.Value;
         _appResources = appResources;
         _appMetadata = appMetadata;
-        _appId = appId;
         _bootstrapGlobalService = serviceProvider.GetRequiredService<IBootstrapGlobalService>();
         _indexPageGenerator = serviceProvider.GetRequiredService<IIndexPageGenerator>();
         _authenticationContext = serviceProvider.GetRequiredService<IAuthenticationContext>();
@@ -79,6 +75,8 @@ public class HomeController : Controller
     /// <summary>
     /// Returns the index view with references to the React app.
     /// </summary>
+    /// <param name="org">The application owner short name.</param>
+    /// <param name="app">The name of the app</param>
     /// <param name="dontChooseReportee">Parameter to indicate disabling of reportee selection in Altinn Portal.</param>
     /// <param name="returnUrl">Custom returnUrl param that will be verified</param>
     /// <param name="lang">The chosen language to use for default text resources</param>
@@ -91,6 +89,8 @@ public class HomeController : Controller
     [Route("instance/{partyId}/{instanceGuid}")]
     [Route("instance/{partyId}/{instanceGuid}/{*rest}")]
     public async Task<IActionResult> Index(
+        [FromRoute] string org,
+        [FromRoute] string app,
         [FromQuery] bool dontChooseReportee,
         [FromQuery] string? returnUrl,
         [FromQuery] string? lang = null
@@ -112,7 +112,7 @@ public class HomeController : Controller
 
         if (await ShouldShowAppView())
         {
-            var partyRedirect = await GetPartySelectionRedirect();
+            var partyRedirect = await GetPartySelectionRedirect(org, app);
             if (partyRedirect is not null)
             {
                 return partyRedirect;
@@ -120,8 +120,8 @@ public class HomeController : Controller
 
             if (_indexPageGenerator.HasLegacyIndexCshtml)
             {
-                ViewBag.org = _appId.Org;
-                ViewBag.app = _appId.App;
+                ViewBag.org = org;
+                ViewBag.app = app;
                 return PartialView("Index");
             }
 
@@ -131,18 +131,13 @@ public class HomeController : Controller
                 frontendVersionOverride = cookie.TrimEnd('/');
             }
 
-            var appGlobalState = await _bootstrapGlobalService.GetGlobalState(_appId.Org, _appId.App, returnUrl, lang);
-            var html = await _indexPageGenerator.Generate(
-                _appId.Org,
-                _appId.App,
-                appGlobalState,
-                frontendVersionOverride
-            );
+            var appGlobalState = await _bootstrapGlobalService.GetGlobalState(org, app, returnUrl, lang);
+            var html = await _indexPageGenerator.Generate(org, app, appGlobalState, frontendVersionOverride);
             return Content(html, "text/html; charset=utf-8");
         }
 
         string scheme = _env.IsDevelopment() ? "http" : "https";
-        string goToUrl = HttpUtility.UrlEncode($"{scheme}://{Request.Host}/{_appId.Org}/{_appId.App}");
+        string goToUrl = HttpUtility.UrlEncode($"{scheme}://{Request.Host}/{org}/{app}");
 
         string redirectUrl = $"{_platformSettings.ApiAuthenticationEndpoint}authentication?goto={goToUrl}";
 
@@ -182,7 +177,7 @@ public class HomeController : Controller
     [ProducesResponseType(typeof(string), StatusCodes.Status200OK, "text/html")]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest, "text/plain")]
     [Route("set-query-params")]
-    public async Task<IActionResult> SetQueryParams()
+    public async Task<IActionResult> SetQueryParams(string org, string app)
     {
         ApplicationMetadata application = await _appMetadata.GetApplicationMetadata();
         if (!IsStatelessApp(application))
@@ -247,7 +242,7 @@ public class HomeController : Controller
         return Content(htmlContent, "text/html");
     }
 
-    private async Task<IActionResult?> GetPartySelectionRedirect()
+    private async Task<IActionResult?> GetPartySelectionRedirect(string org, string app)
     {
         // Only redirect for authenticated users
         if (_authenticationContext.Current is not Authenticated.User user)
@@ -273,13 +268,13 @@ public class HomeController : Controller
         catch (AuthenticationContextException)
         {
             // Selected party doesn't exist or couldn't be loaded - redirect to party selection with error
-            return Redirect($"/{_appId.Org}/{_appId.App}/party-selection/403");
+            return Redirect($"/{org}/{app}/party-selection/403");
         }
 
         // If the selected party is not valid, redirect to party-selection/403
         if (details.CanRepresent == false)
         {
-            return Redirect($"/{_appId.Org}/{_appId.App}/party-selection/403");
+            return Redirect($"/{org}/{app}/party-selection/403");
         }
 
         // If only one valid party, no need to prompt
@@ -293,7 +288,7 @@ public class HomeController : Controller
         // If promptForParty is "always", always redirect regardless of user preference
         if (string.Equals(application.PromptForParty, "always", StringComparison.OrdinalIgnoreCase))
         {
-            return Redirect($"/{_appId.Org}/{_appId.App}/party-selection/explained");
+            return Redirect($"/{org}/{app}/party-selection/explained");
         }
 
         // If promptForParty is "never", skip party selection
@@ -309,7 +304,7 @@ public class HomeController : Controller
         }
 
         // Default behavior with multiple parties: redirect to party selection
-        return Redirect($"/{_appId.Org}/{_appId.App}/party-selection/explained");
+        return Redirect($"/{org}/{app}/party-selection/explained");
     }
 
     private async Task<bool> ShouldShowAppView()
