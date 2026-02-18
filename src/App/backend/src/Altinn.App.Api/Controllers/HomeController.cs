@@ -49,6 +49,7 @@ public class HomeController : Controller
     /// <param name="appSettings">The application settings.</param>
     /// <param name="appResources">The application resources service.</param>
     /// <param name="appMetadata">The application metadata service.</param>
+    /// <param name="appId">The configured AppId</param>
     /// <param name="logger">The logger for the controller.</param>
     public HomeController(
         IServiceProvider serviceProvider,
