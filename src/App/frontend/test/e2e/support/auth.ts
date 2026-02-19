@@ -4,7 +4,14 @@ import { interceptAltinnAppGlobalData } from 'test/e2e/support/intercept-global-
 
 import type { IProcess, ITask } from 'src/types/shared';
 
-export type CyUser = 'default' | 'manager' | 'accountant' | 'auditor' | 'selfIdentified' | 'multiPartyPrompt';
+export type CyUser =
+  | 'default'
+  | 'manager'
+  | 'accountant'
+  | 'auditor'
+  | 'selfIdentified'
+  | 'multiPartyPrompt'
+  | 'multiPartyPrompt2';
 
 type UserInfo = {
   firstName: string;
@@ -56,6 +63,13 @@ export const cyUserCredentials: { [K in CyUser]: UserInfo } = {
     userName: Cypress.env('multiPartyPromptUserName'),
     userPassword: Cypress.env('multiPartyPromptUserPwd'),
     localPartyId: Cypress.env('multiPartyPromptPartyId'),
+  },
+  multiPartyPrompt2: {
+    firstName: Cypress.env('multiPartyPrompt2FirstName'),
+    displayName: Cypress.env('multiPartyPrompt2FullName'),
+    userName: Cypress.env('multiPartyPrompt2UserName'),
+    userPassword: Cypress.env('multiPartyPrompt2UserPwd'),
+    localPartyId: Cypress.env('multiPartyPrompt2PartyId'),
   },
 };
 

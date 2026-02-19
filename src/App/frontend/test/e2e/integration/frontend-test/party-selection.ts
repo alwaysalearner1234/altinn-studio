@@ -1,7 +1,6 @@
 import texts from 'test/e2e/fixtures/texts.json';
 import { AppFrontend } from 'test/e2e/pageobjects/app-frontend';
-import { cyMockResponses, CyPartyMocks, removeAllButOneOrg } from 'test/e2e/pageobjects/party-mocks';
-import { cyUserCredentials } from 'test/e2e/support/auth';
+import { cyMockResponses, CyPartyMocks } from 'test/e2e/pageobjects/party-mocks';
 import { interceptAltinnAppGlobalData } from 'test/e2e/support/intercept-global-data';
 
 const appFrontend = new AppFrontend();
@@ -141,7 +140,7 @@ describe('Party selection', () => {
     cy.clearCookie('AltinnPartyId');
 
     // User 2001 has multiple parties and doNotPromptForParty=false
-    cy.startAppInstance(appFrontend.apps.frontendTest, { cyUser: 'multiPartyPrompt' });
+    cy.startAppInstance(appFrontend.apps.frontendTest, { cyUser: 'multiPartyPrompt2' });
 
     // Should see party selection page with explanation
     cy.get(appFrontend.partySelection.appHeader).should('be.visible');
@@ -202,17 +201,12 @@ describe('Party selection', () => {
   // NOTE: Tests for promptForParty=always/never are not included here because they require
   // test apps with specific applicationmetadata.json configuration. These scenarios are
   // covered by backend integration tests in HomeControllerTest_PartySelection.cs.
-
   it('Should be possible to select another party if instantiation fails, and go back to party selection and instantiate again', () => {
     cy.allowFailureOnEnd();
-    // Use multiPartyPrompt user (doNotPromptForParty=false) to trigger backend redirect to party selection
-    const user = cyUserCredentials.multiPartyPrompt.firstName;
-    cyMockResponses({
-      allowedToInstantiate: (parties) =>
-        // Removing all other users as well, since one of the users are not allowed to instantiate on tt02
-        removeAllButOneOrg(parties).filter((party) => party.orgNumber || party.name.includes(user)),
-    });
-    cy.startAppInstance(appFrontend.apps.frontendTest, { cyUser: 'multiPartyPrompt' });
+    // Use multiPartyPrompt2 user (doNotPromptForParty=false) to trigger backend redirect to party selection
+    cy.startAppInstance(appFrontend.apps.frontendTest, { cyUser: 'multiPartyPrompt2' });
+
+    cy.intercept('**/active', []).as('activeInstances');
 
     // Select the first organisation. This is not allowed to instantiate in this app, so it will throw an error.
     cy.findAllByText(/org\.nr\. \d+/)
@@ -233,6 +227,7 @@ describe('Party selection', () => {
     cy.findAllByText(/personnr\. \d+/)
       .first()
       .click();
+
     cy.findByRole('heading', { name: 'Appen for test av app frontend' }).should('be.visible');
 
     // To make sure this instance is different from the next, we navigate to the next process step in this one
