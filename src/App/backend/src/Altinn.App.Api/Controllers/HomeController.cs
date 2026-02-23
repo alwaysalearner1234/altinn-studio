@@ -258,11 +258,24 @@ public class HomeController : Controller
         // Don't redirect if the user is already on a party-selection or instance route
         var path = HttpContext.Request.Path.Value ?? "";
         if (
-            path.Contains("/party-selection", StringComparison.OrdinalIgnoreCase)
+            path.Contains("/party-selection/", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith("/party-selection", StringComparison.OrdinalIgnoreCase)
             || path.Contains("/instance/", StringComparison.OrdinalIgnoreCase)
         )
         {
             return null;
+        }
+
+        ApplicationMetadata application = await _appMetadata.GetApplicationMetadata();
+
+        // Skip party selection for stateless anonymous apps
+        if (IsStatelessApp(application))
+        {
+            DataType? dataType = GetStatelessDataType(application);
+            if (dataType?.AppLogic?.AllowAnonymousOnStateless == true)
+            {
+                return null;
+            }
         }
 
         Authenticated.User.Details details;
@@ -282,13 +295,17 @@ public class HomeController : Controller
             return Redirect($"/{_appId.Org}/{_appId.App}/party-selection/403");
         }
 
+        // If no valid parties, redirect to party-selection error
+        if (details.PartiesAllowedToInstantiate.Count == 0)
+        {
+            return Redirect($"/{_appId.Org}/{_appId.App}/party-selection/403");
+        }
+
         // If only one valid party, no need to prompt
-        if (details.PartiesAllowedToInstantiate.Count <= 1)
+        if (details.PartiesAllowedToInstantiate.Count == 1)
         {
             return null;
         }
-
-        ApplicationMetadata application = await _appMetadata.GetApplicationMetadata();
 
         // If promptForParty is "always", always redirect regardless of user preference
         if (string.Equals(application.PromptForParty, "always", StringComparison.OrdinalIgnoreCase))

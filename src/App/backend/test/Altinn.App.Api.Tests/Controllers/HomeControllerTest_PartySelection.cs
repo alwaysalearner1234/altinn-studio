@@ -333,4 +333,55 @@ public class HomeControllerTestPartySelection : ApiTestBase, IClassFixture<WebAp
         // User 1337 has doNotPromptForParty=true, so should not redirect
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Index_ZeroAllowedParties_RedirectsToPartySelection403()
+    {
+        // Arrange: user has parties but none match the app's allowed party types
+        int userId = 1337;
+        int userPartyId = 501337;
+
+        OverrideServicesForThisTest = (services) =>
+        {
+            services.AddSingleton(
+                new AppMetadataMutationHook(appMetadata =>
+                {
+                    appMetadata.PartyTypesAllowed = new PartyTypesAllowed
+                    {
+                        Person = false,
+                        Organisation = true,
+                        SubUnit = false,
+                        BankruptcyEstate = false,
+                    };
+                })
+            );
+        };
+
+        _authorizationClientMock.Setup(a => a.ValidateSelectedParty(userId, userPartyId)).ReturnsAsync(true);
+        _authorizationClientMock
+            .Setup(a => a.GetPartyList(userId))
+            .ReturnsAsync(
+                new List<Party>
+                {
+                    new()
+                    {
+                        PartyId = userPartyId,
+                        PartyTypeName = PartyType.Person,
+                        Name = "Sophie Salt",
+                    },
+                }
+            );
+
+        using var client = GetRootedUserClient(Org, App, userId, userPartyId);
+
+        // Act
+        var response = await client.GetAsync($"{Org}/{App}/");
+
+        // Assert
+        OutputHelper.WriteLine($"Status: {response.StatusCode}");
+        OutputHelper.WriteLine($"Location: {response.Headers.Location}");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("party-selection/403", response.Headers.Location?.ToString() ?? "");
+    }
 }
