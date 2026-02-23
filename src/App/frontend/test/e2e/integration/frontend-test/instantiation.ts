@@ -13,13 +13,15 @@ describe('Instantiation', () => {
   // See ttd/frontend-test/App/logic/Instantiation/InstantiationValidator.cs
   const invalidParty =
     Cypress.env('type') === 'localtest'
-      ? /01899699001/ // Localtest: Oslos Vakreste borettslag
+      ? /01899699001/ // Localtest: Person party for user 2001 (MultiParty Prompt, SSN 01899699001)
       : /310732001/; // TT02: Søvnig Impulsiv Tiger AS
 
-  it('should show an error message when going directly to instantiation', () => {
+  beforeEach(() => {
     // Clear party cookie from previous tests to avoid cross-test state pollution
     cy.clearCookie('AltinnPartyId');
+  });
 
+  it('should show an error message when going directly to instantiation', () => {
     interceptAltinnAppGlobalData((globalData) => {
       globalData.applicationMetadata.onEntry = { show: 'new-instance' };
     });
@@ -34,9 +36,6 @@ describe('Instantiation', () => {
   });
 
   it('should show an error message when starting a new instance from instance-selection', () => {
-    // Clear party cookie from previous tests to avoid cross-test state pollution
-    cy.clearCookie('AltinnPartyId');
-
     cyMockResponses({
       doNotPromptForParty: false,
       onEntryShow: 'select-instance',
@@ -66,8 +65,6 @@ describe('Instantiation', () => {
 
   it('should show custom error message from instantiation validator when directly instantiating', () => {
     cy.allowFailureOnEnd();
-    // Clear party cookie from previous tests to avoid cross-test state pollution
-    cy.clearCookie('AltinnPartyId');
     // Mock active instances to prevent instance-selection redirect from accumulated test data
     cy.intercept('**/active', []).as('activeInstances');
 
@@ -116,9 +113,6 @@ describe('Instantiation', () => {
   });
 
   it('should show custom error message from instantiation validator from instance-selection', () => {
-    // Clear party cookie from previous tests to avoid cross-test state pollution
-    cy.clearCookie('AltinnPartyId');
-
     const instanceIdExamples = [`512345/${uuidv4()}`, `512345/${uuidv4()}`, `512345/${uuidv4()}`];
     cy.intercept('**/active', [
       {
