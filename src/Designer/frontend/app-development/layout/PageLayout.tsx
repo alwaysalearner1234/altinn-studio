@@ -16,11 +16,8 @@ import { type RepoStatus } from 'app-shared/types/RepoStatus';
 import { useStudioEnvironmentParams } from 'app-shared/hooks/useStudioEnvironmentParams';
 import { VersionDialog } from './VersionDialog/VersionDialog';
 const STUDIO_TITLE_SUFFIX = ' \u2013 Altinn Studio';
-const DEFAULT_DOCUMENT_TITLE =
-'Altinn Studio';
+const DEFAULT_DOCUMENT_TITLE ='Altinn Studio';
   
-
-
 /**
  * Displays the layout for the app development pages
  */
@@ -30,8 +27,7 @@ export const PageLayout = (): React.ReactNode => {
   const match = matchPath({ path: '/:org/:app', caseSensitive: true, end: false }, pathname);
   const org = match?.params?.org;
   const app = match?.params?.app;
-
-  const { data: repository } = useRepoMetadataQuery(org, app);
+  const { data: repository } = useRepoMetadataQuery(org ?? '', app ?? '');
   const repoName = repository?.name;
   
 
@@ -54,7 +50,7 @@ export const PageLayout = (): React.ReactNode => {
     data: repoStatus,
     isPending: isRepoStatusPending,
     error: repoStatusError,
-  } = useRepoStatusQuery(org, app);
+  } = useRepoStatusQuery(org ?? '', app ?? '');
 
   const { data: user, isPending: isUserPending } = useUserQuery();
 
