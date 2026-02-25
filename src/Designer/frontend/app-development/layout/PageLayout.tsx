@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import React from 'react';
 import { Outlet, matchPath, useLocation } from 'react-router-dom';
 import { PageHeader } from './PageHeader';
@@ -22,10 +23,21 @@ export const PageLayout = (): React.ReactNode => {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const match = matchPath({ path: '/:org/:app', caseSensitive: true, end: false }, pathname);
-  const { org, app } = match.params;
+  const org = match?.params?.org;
+  const app = match?.params?.app;
+
+  const { data: repository } = useRepoMetadataQuery(org, app);
+  const repoName = repository?.name;
+
+  useEffect(() => {
+    if (repoName) {
+       document.title = `${repoName} – Altinn Studio`;
+    } else if (app) {
+       document.title = `${app} – Altinn Studio`;
+    }
+  }, [repoName, app]);
 
   const { data: orgs, isPending: orgsPending } = useOrgListQuery();
-  const { data: repository } = useRepoMetadataQuery(org, app);
   const repoOwnerIsOrg = !orgsPending && Object.keys(orgs).includes(repository?.owner?.login);
 
   const {
