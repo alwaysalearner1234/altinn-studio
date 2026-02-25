@@ -15,6 +15,11 @@ import { type AxiosError } from 'axios';
 import { type RepoStatus } from 'app-shared/types/RepoStatus';
 import { useStudioEnvironmentParams } from 'app-shared/hooks/useStudioEnvironmentParams';
 import { VersionDialog } from './VersionDialog/VersionDialog';
+const STUDIO_TITLE_SUFFIX = ' \u2013 Altinn Studio';
+const DEFAULT_DOCUMENT_TITLE =
+'Altinn Studio';
+  
+
 
 /**
  * Displays the layout for the app development pages
@@ -28,14 +33,19 @@ export const PageLayout = (): React.ReactNode => {
 
   const { data: repository } = useRepoMetadataQuery(org, app);
   const repoName = repository?.name;
+  
 
   useEffect(() => {
-    if (repoName) {
-       document.title = `${repoName} – Altinn Studio`;
-    } else if (app) {
-       document.title = `${app} – Altinn Studio`;
-    }
-  }, [repoName, app]);
+  const title = repoName ?? app;
+
+  document.title = title
+    ? `${title}${STUDIO_TITLE_SUFFIX}`
+    : DEFAULT_DOCUMENT_TITLE;
+
+  return () => {
+    document.title = DEFAULT_DOCUMENT_TITLE;
+  };
+}, [repoName, app]);
 
   const { data: orgs, isPending: orgsPending } = useOrgListQuery();
   const repoOwnerIsOrg = !orgsPending && Object.keys(orgs).includes(repository?.owner?.login);
